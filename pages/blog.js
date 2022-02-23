@@ -66,7 +66,7 @@ export default function Blog(props) {
         <PostFeed posts={posts} admin={false} />
         {!loading && !postsEnd && <button onClick={getMorePosts}>Cargar mas</button>}
         <Loader show={loading}/>
-        {postsEnd && 'No hay nada mas que ver...'}
+        {postsEnd && 'Has cargado el ultimo articulo...'}
         </>
         )}
 
