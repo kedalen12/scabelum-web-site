@@ -1,313 +1,185 @@
-import { auth, firestore, getFirebaseLoginErrorFormated, googleAuthProvider } from "../lib/firebase";
-import { isValidElement, useContext, useEffect, useState } from "react";
-import { UserContext } from "../lib/context";
-import * as AiIcons from "react-icons/ai";
-import * as FaIcons from "react-icons/fa";
-import * as CgIcons from "react-icons/cg";
-
-import toast from 'react-hot-toast'
-import Link from "next/link";
-
-import { ValidateEmail } from "../lib/validations"
-import InputField from "../components/InputField";
-import { useRouter } from "next/router";
 import BaseForm from "../components/BaseForm";
+import InputField from "../components/InputField";
+import * as FaIcons from 'react-icons/fa'
+import { useForm } from "../lib/hooks";
+import { useState } from "react";
+import ErrorLabel from "../components/ErrorLabel";
+import { auth, createUserAsync, firestore, getFirebaseLoginErrorFormated, signInAsync } from "../lib/firebase";
+import { ProviderId } from "firebase/auth";
+import toast from "react-hot-toast";
+import WaitingDonut from "../components/WaitingDonut";
+import { useEffect } from "react";
+import AuthCheck, { EmailVerifiedCheck } from "../components/AuthCheck";
+import { useRouter } from "next/router";
+import Link from "next/link";
+const wasLoggedIn = auth.currentUser === null ? 0 : 1;
 
-export default function EnterPage(props){
-    const {user, userData} = useContext(UserContext);
-    const router = useRouter();
 
-    return (
-        <main>
-            <div className="box-center">
-            {(user && userData) ?
-                !userData.admin && !userData.verified ? <AdditionalDataForm /> : useEffect(() => {
-                    router.push('/profile')
-                }, [])
-                :
-                <>
-                    <SignInForm />
-                </>
+export default function SignInPage(){
+   
+
+    const formSchema = {
+        email : '',
+        password : '',
+        firstName : '',
+    }
+    const router = useRouter()
+    const { handleChange, handleSubmit, values, errors, setErrors, setValues } = useForm(formSchema, onFormValidation);
+
+    const [registerProcess, setRegisterProcess] = useState(0)  
+
+    const [isLogin, setIsLogin] = useState(true)    
+
+    const [isSubmitted, setIsSubmitted] = useState(false);
+
+    const signIn = async (provider) => {
+        try{
+            const result = await signInAsync(provider, values.email, values.password)
+            if(result.success){
+                window.location.href = "/"
             }
-            </div>
-        </main>
-    )
-}
-
-
-function SignInButton(){
-    const signInWithGoogle = async (e) => {
-        e.preventDefault()
-        try{
-            var r =  await auth.signInWithPopup(googleAuthProvider);
-        } catch(e){
-            return null;
-        }
-      };
-
-    return (
-        <button className="btn-social" onClick={signInWithGoogle}>
-            <AiIcons.AiFillGoogleCircle className="social-icon-login"/>
-        </button>
-    );
-}
-
-
-function AdditionalDataForm(){
-    const [formValue, setFormValue] = useState({
-        firstName : null,
-        secondName: null,
-        lastName: null
-    })
-    const [validName, setValidName] = useState(false);
-    const [validSecondName, setValidSecondName] = useState(false);
-    const [validLastName, setValidLastName] = useState(true);
-    const [hasLastName, setHasLastName] = useState(false);
-    const { user,userData } = useContext(UserContext);
-
-    const onSubmit = (e) => {
-        e.preventDefault();
-        const d = new Date()
-        firestore
-        .doc(`users/${user.uid}`)
-        .set({
-            firstName: formValue.firstName,
-            secondName: formValue.secondName,
-            lastName: formValue.lastName ? formValue.lastName : null,
-            admin: false,
-            verified: true,
-            createdAt: d.getTime(),
-            lastLogin: d.getTime()
-        });
-    }
-
-    const onFirstNameChange = (e) => {
-        const val = e.target.value;
-        const re = /[a-zA-Z]/;
-        if(re.test(val)){
-            formValue.firstName = val;
-            setValidName(true)
-        } else if(val){
-            toast.error(`${val} no es un nombre valido`)
-            setValidName(false)
-
-            return
-        } else {
-            setValidName(false)
-        }
-        
-    } 
-    const onSecondNameChange = (e) => {
-        const val = e.target.value;
-        const re = /[a-zA-Z]/;
-        if(re.test(val)){
-            formValue.secondName = val;
-            setValidSecondName(true)
-        } else if(val){
-            toast.error(`${val} no es un apellido valido`)
-            setValidSecondName(false)
-
-            return
-        } else {
-            setValidSecondName(false)
-        }
-        
-    } 
-    const onLastNameChange = (e) => {
-        const val = e.target.value;
-        const re = /[a-zA-Z]/;
-        if(re.test(val)){
-            formValue.lastName = val;
-            setValidLastName(true)
-            setHasLastName(true)
-        } else if(val){
-            toast.error(`${val} no es un apellido valido`)
-            setValidLastName(false)
-            setHasLastName(true)
-        } else {
-            setValidLastName(false)
-            setHasLastName(false)
-        }
-    } 
-
-    const getDisabled = function (){
-        if(!hasLastName){
-            return validName && validSecondName
-        } 
-
-        return validName && validSecondName && validLastName
-    }
-
-    
-    return moreInfoNeededComponent(onFirstNameChange, onSecondNameChange, onLastNameChange, getDisabled, onSubmit)
-
-    
-}
-
-function SignInForm(onFirstNameChange, onSecondNameChange, onLastNameChange, getDisabled, disabled){
-
-    const signInWithEmailAndPassword = async () => {
-        try{
-            await auth.signInWithEmailAndPassword(formValue.email, formValue.password)
         } catch(e){
             toast.error(e.code)
         }
     }
 
-    const registerUserWithEmailAndPassword = async () => {
-        try{
-            await auth.createUserWithEmailAndPassword(formValue.email, formValue.password)
-        } catch(error)
-        {
-            var code = error.code;
-            toast.error(getFirebaseLoginErrorFormated(code, formValue))
+    const registerUser = async function(provider){
+        const creationResult = await createUserAsync(provider,values.email, values.password, values.firstName)
+        if(!creationResult.success){
+            toast.error(getFirebaseLoginErrorFormated(creationResult.error))
+            return
+        } else if(!creationResult.verified) {
+            auth.currentUser.sendEmailVerification();
         }
     }
-
-    const setValue = (valId, val) => {
-        if(valId == 0){
-            var cPass = formValue.password;
-            setFormValue({
-                password: cPass,
-                email : val
-            })
-        } else {
-            var cEmail = formValue.email;
-
-            setFormValue({
-                password: val,
-                email : cEmail
-            })
-        }
-    }
-
-    const [formValue, setFormValue] = useState({
-        email: null,
-        password: null
-    })
-    const [validEmail, setValidEmail] = useState(false)
     
-    const [loginState, setLoginState] = useState(true)
-
-    const getSubmitFunction = () => {
-        if(loginState){
-            return signInWithEmailAndPassword
-        }else {
-            return registerUserWithEmailAndPassword
-        }
-    }
-
-    const getElementText = function (element){
-        if(loginState){
-            if(element === 0){
-                return "Necesito una cuenta nueva."
-            } else if(element === 1){
-                return "Acceder"
-            }
-        }else {
-
-            if(element === 0){
-                return "Ya tengo una cuenta."
-            } else if(element === 1){
-                return "Registrarme"
-            }
-           
-        }
-    }
-
-    const getLinkText = function (){
-        if(loginState){
-            return "Necesito una cuenta nueva."
-        }else {
-            return "Ya tengo una cuenta."
-        }
-    }
-
-
-    const onEmailChange = function (e) {
-        const val = e.target.value;
-        if(ValidateEmail(val)){
-            setValidEmail(true)
-            setValue(0, val)
-        } else {
-            setValidEmail(false)
-            setValue(0, val)
-        }
-    }
-
-    const sendPasswordRecoveryEmail = async () => {
-        if(validEmail){
-            try{
-                await auth.sendPasswordResetEmail(formValue.email)
-                toast.success("Sigue las instrucciones para recuperar tu contraseña en tu email.")
-            } catch(e){
-                toast.error("No se ha podido enviar el email de recuperación.")
+    function onFormValidation (){
+        setIsSubmitted(true);
+        if(!isLogin){
+            if(registerProcess === 0){
+                registerUser(ProviderId.GITHUB)
+                setRegisterProcess(1)
             }
         } else {
-            toast.error("Introduce un email valido.")
+            signIn(ProviderId.GITHUB)
         }
-    }
-
-    const modifyFormState = () => {
-        if(loginState){
-            setLoginState(false)
-        } else {
-            setLoginState(true)
-        }
-    }
-    return signInFormComponent(loginState,setLoginState,modifyFormState,validEmail, getSubmitFunction, getElementText, setValue, onEmailChange)
+    } 
     
+    const route = () => {
+    }
+    //User is logged in 
+    const nonAuthorizedAccess = <BaseForm elements={
+        GetForm({isLogin,setIsLogin,handleChange, errors, registerProcess, setRegisterProcess, setErrors, setValues})
+    } onFormSubmit={handleSubmit}/>;
+    return (
+        <AuthCheck fallback={nonAuthorizedAccess}>
+            <EmailVerifiedCheck fallback={verificationStillNeeded(setRegisterProcess)}>
+                <Link href="/">
+                    <button className="btn pointer-click">Volver al Inicio</button>
+                </Link>
+            </EmailVerifiedCheck>
+        </AuthCheck>
+
+    )
 }
 
 
-const moreInfoNeededComponent = function (onFirstNameChange, onSecondNameChange, onLastNameChange, getDisabled, onSubmit) {
-    return (
-        (
-            <>
-            <BaseForm onFormSubmit={onSubmit} elements={[
-                <>
-                    <h2>Necesitamos algo mas de información:</h2>
-                    <InputField enabled={true} placeHolder='Nombre' icon={<CgIcons.CgAsterisk />} type='input' onChange={onFirstNameChange}/>
-                    <InputField enabled={true} placeHolder='Apellido' icon={<CgIcons.CgAsterisk />} type='input' onChange={onSecondNameChange}/>
-                    <InputField enabled={true} placeHolder='Segundo Apellido' icon={null} type='input' onChange={onLastNameChange}/>
-                    <button className="btn" type="submit" disabled={!getDisabled()}>
-                        Aceptar
-                    </button>
-                </>
-            ]}/>
+const GetForm = function ({isLogin,setIsLogin,handleChange, errors, registerProcess, setRegisterProcess, values, setErrors, setValues}) { 
+
+    if(isLogin){
+        return LoginForm({setIsLogin, handleChange, errors, registerProcess, setRegisterProcess, setErrors, setValues})
+    }else {
+        return RegisterForm({setIsLogin, handleChange, errors, registerProcess, setRegisterProcess, setErrors, setValues})
+    }
+}
+
+const LoginForm = function({setIsLogin, handleChange, errors, registerProcess, setRegisterProcess, setErrors, setValues}){
+ 
+    if(registerProcess !== 0){
+        return RegisterForm({setIsLogin, handleChange, errors, registerProcess, setRegisterProcess, setErrors, setValues})
+    }
+
+   return ( <>
+            <h1>Acceder</h1>
+            <InputField enabled={true} name="email" onChange={handleChange}  type='email' placeHolder='email@email.com' icon={<FaIcons.FaUserAstronaut/>} />
+            <ErrorLabel condition={errors.email} error={errors.email}/>
+            <InputField enabled={true} name="password" onChange={handleChange} type='password' placeHolder='password' icon={<FaIcons.FaKey/>}/>
+            <ErrorLabel condition={errors.password} error={errors.password}/>
+            <p className="social-text cursor-click">He olvidado mi contraseña</p>
+            <p className="social-text cursor-click" onClick={() => {
+                setErrors({})
+                setValues({})
+                setIsLogin(false)
+                
+            }
+                }>Aún no tienes una cuenta? Registrate.</p>
+            <input type="submit" className="btn cursor-click" value='Acceder'/>
+            <div className="social-media">
+            </div>
         </>
-        )
-    );
+   )
+}
+const onSuccessHtml = (
+    <>
+    <h1>Tu cuenta ha sido verificada!</h1>
+            <FaIcons.FaCheckDouble className="icon-big"/>
+    </>
+)
+const verificationStillNeeded = (setRegisterProcess) => { 
+    
+    return (
+    <>
+    <WaitingDonut conditon={() => {
+        auth.currentUser?.reload()
+        return auth.currentUser?.emailVerified === true;
+    }} checkConditionEvery={500} overWaiting={'Necesitamos verificar tu cuenta...'} underWaiting={'Porfavor haz click en el enlace que te hemos enviado'} callBack={() => {
+        setRegisterProcess(2)
+    }} onSuccessHtml={onSuccessHtml}/>
+    <input className="btn cursor-click" value="No me ha llegado ningun correo" onClick={(e) => {
+        e.preventDefault()
+        if(canClick){
+            canClick = false;
+            auth.currentUser?.sendEmailVerification()
+            toast.success(`Se ha enviado un correo electronico de nuevo`)
+            setTimeout(() => { canClick = true }, 30000)
+        }
+    }} />
+    </>
+)
 }
 
-const signInFormComponent = function (loginState,setLoginState,modifyFormState,validEmail, getSubmitFunction, getElementText, setValue, onEmailChange){
-    return (
-        <>
-            <BaseForm elements={[
-                <>
-                <h2 className="title">
-                        Acceder
-                    </h2>
-                    <InputField enabled={true} placeHolder='email@mail.com' icon={<FaIcons.FaUserAstronaut/>} type='input' onChange={onEmailChange}/>
-                    <InputField enabled={true} placeHolder='password' icon={<FaIcons.FaLock/>} type='password' onChange={(e) => 
-                    {
-                        setValue(1, e.target.value)
-                    }}/>
-                    <input type="button" onClick={getSubmitFunction()} disabled={!validEmail} className="btn solid" value={getElementText(1)}/>
-                    {loginState && (
-                    <p className="social-text cursor-click"> 
-                            He olvidado mi contraseña
-                    </p>
-                    )}
-                    <p className="social-text cursor-click" onClick={modifyFormState}>{getElementText(0)}</p>
-                    <p className="social-text">O acceder con tus redes sociales</p>
-                    <div className="social-media">
-                        <SignInButton />
-                    </div>
-                </>
-            ]} >
+const RegisterForm = function({setIsLogin, handleChange, errors, registerProcess, setRegisterProcess, setErrors, setValues}){
 
-            </BaseForm>
+    const registrationStep = (
+        <>
+            <h1>Registro</h1>
+            <InputField enabled={true} name="email" onChange={handleChange}  type='email' placeHolder='email@email.com' icon={<FaIcons.FaUserAstronaut/>} />
+            <ErrorLabel condition={errors.email} error={errors.email}/>
+            <InputField enabled={true} name="password" onChange={handleChange} type='password' placeHolder='password' icon={<FaIcons.FaKey/>}/>
+            <ErrorLabel condition={errors.password} error={errors.password}/>
+            <InputField enabled={true} name="firstName" onChange={handleChange} type='text' placeHolder='nombre completo' icon={<FaIcons.FaAddressBook/>}/>
+            <ErrorLabel condition={errors.firstName} error={errors.firstName}/>
+            <p className="social-text cursor-click" onClick={() => {
+                setErrors({})
+                setValues({})
+                setIsLogin(true)  
+                }}>Ya tienes una cuenta? Accede.</p>
+            <input type="submit" className="btn cursor-click" value='Enviar'/>
+            <div className="social-media">
+            </div>
         </>
     )
+
+    //Esto deberia comprobar cada medio segundo si el usuario ha sido verificado
+    
+    let canClick = true;
+  
+
+    if(registerProcess === 0){
+        return registrationStep
+    } else if(registerProcess === 2){
+        return onSuccessHtml
+    } else {
+        return verificationStillNeeded
+    }
 }

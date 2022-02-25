@@ -9,21 +9,6 @@ import Footer from '../components/Footer';
 function MyApp({ Component, pageProps }) {
 
   const userData = useUserData();
-  auth.onAuthStateChanged(function(user){
-    if(!user){
-      return
-    }
-    if(user.emailVerified){
-      return;
-    }
-    auth.currentUser.reload()
-    if(auth.currentUser.emailVerified){
-      firestore.doc(`users/${auth.currentUser.uid}`).update({
-        verified : true
-      })
-      window.location.href = "/"
-    }
-  })
   return (
     <UserContext.Provider value={userData}>
     <Navbar />    

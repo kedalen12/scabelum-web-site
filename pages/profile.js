@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { UserContext } from '../lib/context';
 import PostFeed from '../components/PostFeed';
 import UserProfile from '../components/UserProfile';
-import { getRecentPostsOfAuthor } from '../lib/firebase';
+import { auth, getRecentPostsOfAuthor } from '../lib/firebase';
 import Loader from '../components/Loader';
 
 const fetchPosts = async function GetRecentPosts(setLoading, setHasFetched, setPosts, hasFetched, user){
@@ -25,6 +25,10 @@ export default function Profile(){
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
+        if(!auth.currentUser?.emailVerified){
+            window.location.href = "/signin"
+        }
+
         fetchPosts(setLoading, setHasFetched, setPosts, hasFetched, user)
     }, [])
 
