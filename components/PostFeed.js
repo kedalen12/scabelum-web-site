@@ -1,10 +1,14 @@
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 export default function PostFeed({ posts, admin}) {
     if(!posts){
         return <h1>No has publicado ningun artículo</h1>
     }
-    return posts ? posts.map((post) => <PostItem post={post} key={post.slug} admin={admin} />) : null;
+    return posts ? posts.map((post) => {
+      toast.success(`${post}`)
+    }) : null
+    
 }
 
 
@@ -16,7 +20,7 @@ function PostItem({ post, admin = false }) {
     return (
       <div className="card">
         <p> Autor: <strong> {post.author}</strong> </p>
-        <Link href={`/posts/${post.slug}`}>
+        <Link href={`/posts/${post.docId}`}>
           <h2>
             <a>{post.title}</a>
           </h2>
@@ -32,7 +36,7 @@ function PostItem({ post, admin = false }) {
         {/* If admin view, show extra controls for user */}
         {admin && (
           <>
-            <Link href={`/admin/${post.slug}`}>
+            <Link href={`/admin/${post.docId}`}>
               <h3>
                 <button className="btn-blue">Editar</button>
               </h3>

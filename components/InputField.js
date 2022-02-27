@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 
-export default function InputField({ enabled, icon, type, placeHolder, onChange, onBlur, onFocus, bindValue, name }){
+export default function InputField({ enabled, icon, type, placeHolder, onChange, onBlur, onFocus, bindValue, name, value}){
     return (
         <div className={icon ? 'input-field' : 'input-field no-icon'}>
             {icon}
@@ -9,7 +9,7 @@ export default function InputField({ enabled, icon, type, placeHolder, onChange,
                 if(bindValue){
                     bindValue = e.target.value
                 }
-            }} disabled={!enabled} onBlur={onBlur} ></input>
+            }} disabled={!enabled} onBlur={onBlur} value={value}></input>
         </div>
     )
 }

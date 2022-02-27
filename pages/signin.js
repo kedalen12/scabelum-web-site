@@ -36,17 +36,14 @@ export default function SignInPage(){
         try{
             const result = await signInAsync(provider, values.email, values.password)
             if(result.success){
-                window.location.href = "/"
             }
         } catch(e){
-            toast.error(e.code)
         }
     }
 
     const registerUser = async function(provider){
         const creationResult = await createUserAsync(provider,values.email, values.password, values.firstName)
         if(!creationResult.success){
-            toast.error(getFirebaseLoginErrorFormated(creationResult.error))
             return
         } else if(!creationResult.verified) {
             auth.currentUser.sendEmailVerification();
@@ -55,31 +52,39 @@ export default function SignInPage(){
     
     function onFormValidation (){
         setIsSubmitted(true);
+
         if(!isLogin){
             if(registerProcess === 0){
                 registerUser(ProviderId.GITHUB)
                 setRegisterProcess(1)
-            }
+            }         
         } else {
             signIn(ProviderId.GITHUB)
         }
     } 
-    
-    const route = () => {
-    }
-    //User is logged in 
-    const nonAuthorizedAccess = <BaseForm elements={
-        GetForm({isLogin,setIsLogin,handleChange, errors, registerProcess, setRegisterProcess, setErrors, setValues})
-    } onFormSubmit={handleSubmit}/>;
+
+    const nonAuthorizedAccess = (
+        <BaseForm onSubmit={handleSubmit}> 
+            {GetForm({isLogin,setIsLogin,handleChange, errors, registerProcess, setRegisterProcess,values,setErrors, setValues})}
+        </BaseForm>
+    )
     return (
         <AuthCheck fallback={nonAuthorizedAccess}>
             <EmailVerifiedCheck fallback={verificationStillNeeded(setRegisterProcess)}>
+            <BaseForm>
+
                 <Link href="/">
+                    <>
+                    <h1>Tu cuenta ya ha sido verificada!</h1>
+                    <br></br>
+                <iframe src="https://giphy.com/embed/diUKszNTUghVe" width="397" height="480" frameBorder="0" class="giphy-embed" allowFullScreen></iframe>
+                <br></br>
                     <button className="btn pointer-click">Volver al Inicio</button>
+                    </>
                 </Link>
+                </BaseForm>
             </EmailVerifiedCheck>
         </AuthCheck>
-
     )
 }
 
@@ -113,7 +118,7 @@ const LoginForm = function({setIsLogin, handleChange, errors, registerProcess, s
                 
             }
                 }>Aún no tienes una cuenta? Registrate.</p>
-            <input type="submit" className="btn cursor-click" value='Acceder'/>
+            <input type="submit" className="btn cursor-click-white" value='Acceder'/>
             <div className="social-media">
             </div>
         </>
@@ -128,14 +133,14 @@ const onSuccessHtml = (
 const verificationStillNeeded = (setRegisterProcess) => { 
     
     return (
-    <>
+    <BaseForm>
     <WaitingDonut conditon={() => {
         auth.currentUser?.reload()
         return auth.currentUser?.emailVerified === true;
     }} checkConditionEvery={500} overWaiting={'Necesitamos verificar tu cuenta...'} underWaiting={'Porfavor haz click en el enlace que te hemos enviado'} callBack={() => {
         setRegisterProcess(2)
     }} onSuccessHtml={onSuccessHtml}/>
-    <input className="btn cursor-click" value="No me ha llegado ningun correo" onClick={(e) => {
+    <input className="btn cursor-click-white" value="No me ha llegado ningun correo" onClick={(e) => {
         e.preventDefault()
         if(canClick){
             canClick = false;
@@ -144,7 +149,7 @@ const verificationStillNeeded = (setRegisterProcess) => {
             setTimeout(() => { canClick = true }, 30000)
         }
     }} />
-    </>
+    </BaseForm>
 )
 }
 
@@ -164,7 +169,7 @@ const RegisterForm = function({setIsLogin, handleChange, errors, registerProcess
                 setValues({})
                 setIsLogin(true)  
                 }}>Ya tienes una cuenta? Accede.</p>
-            <input type="submit" className="btn cursor-click" value='Enviar'/>
+            <input type="submit" className="btn cursor-click-white" value='Enviar'/>
             <div className="social-media">
             </div>
         </>

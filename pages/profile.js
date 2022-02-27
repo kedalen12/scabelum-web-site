@@ -4,6 +4,8 @@ import PostFeed from '../components/PostFeed';
 import UserProfile from '../components/UserProfile';
 import { auth, getRecentPostsOfAuthor } from '../lib/firebase';
 import Loader from '../components/Loader';
+import CenterDiv from '../components/CenteredDiv';
+import AuthCheck, { EmailVerifiedCheck } from '../components/AuthCheck';
 
 const fetchPosts = async function GetRecentPosts(setLoading, setHasFetched, setPosts, hasFetched, user){
     if(!user){
@@ -20,43 +22,16 @@ const fetchPosts = async function GetRecentPosts(setLoading, setHasFetched, setP
 
 export default function Profile(){
     const {user, userData} = useContext(UserContext)
-    const [posts, setPosts] = useState({})
-    const [hasFetched, setHasFetched] = useState(false)
-    const [loading, setLoading] = useState(false)
 
-    useEffect(() => {
-        if(!auth.currentUser?.emailVerified){
-            window.location.href = "/signin"
-        }
+    const verificationStillNeeded = {}
+    return (
 
-        fetchPosts(setLoading, setHasFetched, setPosts, hasFetched, user)
-    }, [])
+                <AuthCheck>
+                    <EmailVerifiedCheck fallback={<CenterDiv><h1>Necesitas verificar el email de tu cuenta</h1></CenterDiv>}>
+                        <UserProfile user={userData}/>
+                    </EmailVerifiedCheck>
+                </AuthCheck>
 
-    if(!user || !userData){
-        return <main>
-        
-        </main>
-    } else {
-        return (
-            <main>
-                <UserProfile user={userData}/>
-                {userData.admin && (
-                    <>
-                    {!posts || posts.length <= 0 && (
-                        <Loader show={loading}/>
-                    )}
-                    {posts && posts.length > 0 && (
-                        <PostFeed posts={posts} admin={true}/>
-                    )}
-                    {hasFetched && (
-                        <h1>Parece que no has publicado ningun artículo</h1>
-                    )}
-                    </>
-                )}
-            </main>
-        )
-    }
-    
-    
+        )    
 }
 

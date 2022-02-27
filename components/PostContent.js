@@ -17,9 +17,7 @@ export default function PostContent({ post }) {
             published: true
         });
         toast.success(`El artículo se ha publicado correctamente`)
-        window.location.reload(false);
     }catch(e){
-        toast.error(`${e}`)
     }
 }
   
