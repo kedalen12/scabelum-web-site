@@ -22,7 +22,7 @@
     "react-draft-wysiwyg": "^1.14.7",
     "react-firebase-hooks": "^5.0.2",
     "react-firehooks": "^2.0.1",
-    "react-hook-form": "^7.27.1",
+    "react-hook-form": "^7.36.1",
     "react-hot-toast": "^2.2.0",
     "react-icons": "^4.3.1",
     "react-markdown": "^8.0.0"
